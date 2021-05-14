@@ -1,5 +1,6 @@
 #ifndef PIN_H
 #define PIN_H
+//these can move to #define, but to avoid reuse they should stay in the namespace.
 namespace pins{
   const int X_STEP = 2;
   const int Y_STEP = 3;

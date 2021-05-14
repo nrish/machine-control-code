@@ -28,6 +28,7 @@ class PositionalController{
     pinMode(pins::STEPPER_ENABLE, OUTPUT);
     digitalWrite(pins::STEPPER_ENABLE, LOW);
   }
+  //moves head till it triggers limit switches
   void home(){
     digitalWrite(pins::X_END, HIGH);
     axis_x->setDir(pins::X_END_DIR);
@@ -46,6 +47,7 @@ class PositionalController{
     this->y = 0;
     digitalWrite(pins::Y_END, LOW);
   }
+  //uses stored position of head to move head to new location, might not always be correct!
   void setPos(int x, int y){
     int delta_x = x - this->x;
     int delta_y = y - this->y;
@@ -72,6 +74,12 @@ class PositionalController{
   void setYPos(int y){
     setPos(this->x,y);
   }
+  /*
+   * moves head by delta(x,y) steps
+   * x - steps in x direction
+   * y - steps in y direction
+   * negative steps step backwards
+   */
   void steps(int x, int y){
     this->x += x;
     if(x < 0){
@@ -90,9 +98,11 @@ class PositionalController{
     axis_x->steps(x);
     axis_y->steps(y);
   }
+  //disables stepper drivers
   void disableSteppers(){
     digitalWrite(pins::STEPPER_ENABLE, HIGH);
   }
+  //renable stepper drivers
   void enableSteppers(){
     digitalWrite(pins::STEPPER_ENABLE, LOW);
   }

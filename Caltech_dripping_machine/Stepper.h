@@ -1,8 +1,11 @@
 #ifndef stepper_h
 #define stepper_h
+//dont store position here, this object is just a driver for a stepper.
 class Stepper{
   private:
+    //specifies physical pin to change the state of for direction
     int dirPin = 0;
+    //specifies physical pin to change the state of for stepping driver
     int stepPin = 0;
     //clockwise true, counterclockwise false
     bool dir = true;

@@ -4,8 +4,15 @@
 #include "Positional.h"
 // pull has diameter of 9.6, 9.6/2 = 4.8, 2pi * 4.8 = 30.16, 1600/30.16 (1/8 stepping) = 53.05.
 // well distance is about 9mm, 9mm * 53 steps/mm = 477.45 steps
-const int WELL_DIST_ROW = 452; //steps for well distance
-const int WELL_DIST_COL = 452;
+
+//term code, trigger to halt well loop and reset arduino
+#define TERM_CODE 0x55
+#define UPDATE_CODE 0x02
+#define DONE_CODE 0x01
+//These constants are for the 96 well tray this machine is made for. These values should probably not be calibratable.
+//DIST_ROW and DIST_COL are different values in case machine has problem with inexact steppers, but can be the same in theory.
+const int WELL_DIST_ROW = 452;
+const int WELL_DIST_COL = 452; 
 const int ROWS = 8;
 const int COLS = 12;
 class tray {
@@ -38,14 +45,19 @@ class tray {
     void process(PositionalController* pos, unsigned long time) {
       for (int i = 0; i < ROWS; i++) {
         for (int l = 0; l < COLS; l++) {
+          //check if termination is requested.
           if(Serial.available()){
             byte a = Serial.read();
-            if(a == 0x03){
+            if(a == TERM_CODE){
               return;
             }
           }
+          
+          //check if we have reached the final well.
           if(endIndex == getIndex(l,i))
             return;
+
+          //a little messy, but slowly move servo instead of making it jump and keep track of time while doing this.
           float servopos = 160;
           long startTime = millis();
           while (millis() - startTime < time) {
@@ -53,25 +65,29 @@ class tray {
               servopos -= 0.5;
               analogWrite(pins::PWM_SERVO, (int)servopos);
             }
+            //delay one ms, this might need to be removed if this turns out to cause too much of a time diff.
             delay(1);
             
           }
           analogWrite(pins::PWM_SERVO, 160);
 
+          //check if the next well is the last one in col. if so go the next one
           if(l+1 != COLS){
             if(i % 2){
               pos->steps(-WELL_DIST_COL, 0);
             }else{
               pos->steps(WELL_DIST_COL, 0);
             }
+          }else{
+            //special behavior here if head hangs over well for too long, but testing seems to indicate this is ok.
           }
-          Serial.write(0x01);
+          Serial.write(UPDATE_CODE);
           
         }
         pos->steps(0, WELL_DIST_ROW); 
       }
       pos->home();
-      Serial.write(0x02);
+      Serial.write(DONE_CODE);
       analogWrite(pins::PWM_SERVO, 0);
     }
     void setEndIndex(int end){
