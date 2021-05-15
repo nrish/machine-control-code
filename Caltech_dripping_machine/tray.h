@@ -6,13 +6,10 @@
 // pull has diameter of 9.6, 9.6/2 = 4.8, 2pi * 4.8 = 30.16, 1600/30.16 (1/8 stepping) = 53.05.
 // well distance is about 9mm, 9mm * 53 steps/mm = 477.45 steps
 
-//term code, trigger to halt well loop and reset arduino
 #define TERM_CODE 0x55
 #define UPDATE_CODE 0x02
 #define DONE_CODE 0x01
-//These constants are for the 96 well tray this machine is made for. These values should probably not be calibratable.
-//DIST_ROW and DIST_COL are different values in case machine has problem with inexact steppers, but can be the same in theory.
-
+//probably doesn't need to be calibratable
 const int ROWS = 8;
 const int COLS = 12;
 class trayProcessor {
@@ -22,9 +19,9 @@ class trayProcessor {
     int endIndex = 0;
     uint32_t time = 0;
     boolean dir = false;
-    calibrationValues* values;
+    CalibrationValues* values;
   public:
-    trayProcessor(int x, int y, calibrationValues* values) {
+    trayProcessor(int x, int y, CalibrationValues* values) {
       this->y = y;
       this->x = x;
     }
@@ -42,7 +39,9 @@ class trayProcessor {
       this->time = time;
     }
     void start(PositionalController* pos) {
+      pos->setFastMode(true);
       pos->setPos(x,y);
+      pos->setFastMode(true);
       analogWrite(pins::PWM_SERVO, 160);
       delay(150);
       analogWrite(pins::PWM_SERVO, 0);

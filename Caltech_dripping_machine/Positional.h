@@ -11,9 +11,9 @@ class PositionalController{
   Stepper *axis_y;
   int x = 0;
   int y = 0;
-  calibrationValues* values;
+  CalibrationValues* values;
   public:
-  PositionalController(calibrationValues* values){
+  PositionalController(CalibrationValues* values){
     this->axis_x = new Stepper(pins::X_DIR, pins::X_STEP);
     this->axis_y = new Stepper(pins::Y_DIR, pins::Y_STEP);
     this->values = values;

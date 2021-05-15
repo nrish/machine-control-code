@@ -1,40 +1,12 @@
 #ifndef CALIBRATION_H
 #define CALIBRATION_H
 #include <EEPROM.h>
+#include "serialData.h"
 
-
-struct __attribute__((__packed__)) tray{
-  int x; // index 0
-  int y; // index 1
-};
-
-union writedata{
-  float f;
-  byte b[4];
-  tray t;
-  uint32_t l;
-};
-
-struct __attribute__((__packed__)) calibrationValues{
-  byte WELL_DIST_X;
-  byte WELL_DIST_Y;
-  
-  byte TRAY_DIST_X;
-  byte TRAY_DIST_Y;
-
-  bool Y_END_DIR;
-  bool X_END_DIR;
-
-  tray trays[8];
-};
-union EEPROMData{
-  byte b[sizeof(calibrationValues)];
-  calibrationValues v;
-};
 
 class calibrator{
   private:
-  calibrationValues values;
+  CalibrationValues values;
   
   public:
   calibrator(){
@@ -45,24 +17,24 @@ class calibrator{
   void loadEEPROM(){
     EEPROMData data;
     for(byte i = 0; i < sizeof(values); i++){
-      data.b[i] = EEPROM.read(i);
+      data.bytes[i] = EEPROM.read(i);
     }
-    this->values = data.v;
+    this->values = data.values;
     
   }
   
-  void saveEEPROM(){
+  void saveToEEPROM(){
     EEPROMData data;
-    data.v = this->values;
+    data.values = this->values;
     for(byte i = 0; i < sizeof(values); i++){
       //to preserve the EEPROM, check if this value is already stored.
-      EEPROM.update(i, data.b[i]);
+      EEPROM.update(i, data.bytes[i]);
     }
   }
   byte* toByteArray(){
     
   }
-  calibrationValues* getCalibrationValues(){
+  CalibrationValues* getCalibrationValues(){
     return &values;
   }
 };
