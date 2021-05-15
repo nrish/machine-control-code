@@ -17,7 +17,7 @@ class calibrator{
   void loadEEPROM(){
     EEPROMData data;
     for(byte i = 0; i < sizeof(values); i++){
-      data.bytes[i] = EEPROM.read(i);
+      data.bytes[i] = EEPROM.read(45+i);
     }
     this->values = data.values;
     
@@ -28,7 +28,7 @@ class calibrator{
     data.values = this->values;
     for(byte i = 0; i < sizeof(values); i++){
       //to preserve the EEPROM, check if this value is already stored.
-      EEPROM.update(i, data.bytes[i]);
+      EEPROM.update(45+i, data.bytes[i]);
     }
   }
   byte* toByteArray(){

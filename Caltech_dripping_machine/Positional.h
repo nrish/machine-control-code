@@ -4,7 +4,7 @@
 #include "calibration.h"
 
 class PositionalController{
-  const static uint16_t FAST_MODE = 50;
+  const static uint16_t FAST_MODE = 250;
   const static uint16_t SLOW_MODE = 500;
   private:
   Stepper *axis_x;
