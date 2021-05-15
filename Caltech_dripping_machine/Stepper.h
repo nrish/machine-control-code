@@ -9,13 +9,18 @@ class Stepper{
     int stepPin = 0;
     //clockwise true, counterclockwise false
     bool dir = true;
+    //time between steps (in usec)
+    uint16_t stepUsecs;
   public:
     Stepper(int dir, int step){
       this->dirPin = dir;
       this->stepPin = step; 
+      this->stepUsecs = 500;
       pinMode(dirPin, OUTPUT);
       pinMode(stepPin, OUTPUT);
-       
+      //not sure, but the port A/B register is reset on jmp 0, so best to make sure
+      digitalWrite(dirPin, LOW);
+      digitalWrite(stepPin, LOW);
     }
     void setDir(boolean b){
       this->dir = b;
@@ -30,14 +35,19 @@ class Stepper{
     }
     void step(){
       digitalWrite(stepPin, HIGH);
-      delay(1);
+      delayMicroseconds(stepUsecs);
       digitalWrite(stepPin, LOW);
-      delay(1);
+      delayMicroseconds(stepUsecs);
+      
     }
     void steps(int steps){
       for(int i = 0; i < steps; i++){
         step();
       }
     }
+    void setUsecs(uint16_t usec){
+      this->stepUsecs = usec;
+    }
+    
 };
 #endif
