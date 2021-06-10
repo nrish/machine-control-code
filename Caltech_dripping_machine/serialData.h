@@ -5,8 +5,8 @@
  */
 
 struct __attribute__((__packed__)) Tray{
-  uint16_t x; // index 0
-  uint16_t y; // index 1
+  int32_t x; // index 0
+  int32_t y; // index 1
 };
 
 struct __attribute__((__packed__)) StartData{
@@ -25,8 +25,8 @@ union StartDataSerialized{
 //EEPROM serializable data
 
 struct __attribute__((__packed__)) CalibrationValues{
-  uint16_t WELL_DIST_X;
-  uint16_t WELL_DIST_Y;
+  int16_t WELL_DIST_X;
+  int16_t WELL_DIST_Y;
   
   uint16_t TRAY_DIST_X;
   uint16_t TRAY_DIST_Y;

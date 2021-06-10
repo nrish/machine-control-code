@@ -37,6 +37,12 @@ class calibrator{
   CalibrationValues* getCalibrationValues(){
     return &values;
   }
+  CalibrationValues copyCalibrationValues(){
+    return values;
+  }
+  void setCalibrationValues(CalibrationValues& values){
+    this->values = values;
+  }
 };
 
 namespace pins{

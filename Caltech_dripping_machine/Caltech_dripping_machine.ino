@@ -4,7 +4,6 @@
 
 //term code, trigger to halt well loop and reset arduino
 #define TERM_CODE 0x55
-bool manual = false;
 /**
  * By Riley Ramirez and Forrest Ramirez Oct 16 2020
  * For Caltech
@@ -13,6 +12,13 @@ void setup() {
   
   Serial.begin(19200);
   calibrator calibrationLoader;
+  calibrationLoader.loadEEPROM();
+
+  Serial.println (calibrationLoader.getCalibrationValues()->WELL_DIST_X);
+  Serial.println (calibrationLoader.getCalibrationValues()->WELL_DIST_Y);
+  Serial.println (calibrationLoader.getCalibrationValues()->TRAY_DIST_X);
+  Serial.println (calibrationLoader.getCalibrationValues()->TRAY_DIST_Y);
+  
   PositionalController* posControl = new PositionalController(calibrationLoader.getCalibrationValues());
   //wait for serial to send bytes
   while(Serial.available() != sizeof(StartData));
@@ -30,10 +36,14 @@ void setup() {
   }else{
     //here we accept calibration profiles from serial
     EEPROMData profile;
-    profile.values = *calibrationLoader.getCalibrationValues();
+    
+    profile.values = calibrationLoader.copyCalibrationValues();
     Serial.write(profile.bytes, sizeof(CalibrationValues));
     while(Serial.available() != sizeof(CalibrationValues)) delay(1);
+    
     Serial.readBytes(profile.bytes, sizeof(CalibrationValues));
+    calibrationLoader.setCalibrationValues(profile.values);
+    
     calibrationLoader.saveToEEPROM();
   }
   posControl->home();
