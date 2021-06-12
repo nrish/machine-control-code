@@ -6,9 +6,6 @@
 // pull has diameter of 9.6, 9.6/2 = 4.8, 2pi * 4.8 = 30.16, 1600/30.16 (1/8 stepping) = 53.05.
 // well distance is about 9mm, 9mm * 53 steps/mm = 477.45 steps
 
-#define TERM_CODE 0x55
-#define UPDATE_CODE 0x02
-#define DONE_CODE 0x01
 //probably doesn't need to be calibratable
 const int ROWS = 8;
 const int COLS = 12;
@@ -35,66 +32,59 @@ class trayProcessor {
     int getCol(int index) {
       return index % 12;
     }
-    void setMillsPerWell(uint32_t time){
+    void setMillsPerWell(uint32_t time) {
       this->time = time;
     }
     void start(PositionalController* pos) {
-      pos->setFastMode(true);
-      pos->setPos(x,y);
-      pos->setFastMode(true);
       analogWrite(pins::PWM_SERVO, 160);
       delay(150);
       analogWrite(pins::PWM_SERVO, 0);
+      pos->setFastMode(true);
+      pos->setPos(x, y);
+      pos->setFastMode(true);
     }
     void process(PositionalController* pos) {
-      for (int i = 0; i < ROWS; i++) {
-        for (int l = 0; l < COLS; l++) {
+      for (int row = 0; row < ROWS; row++) {
+        for (int col = 0; col < COLS; col++) {
           //check if termination is requested.
-          if(Serial.available()){
-            byte a = Serial.read();
-            if(a == TERM_CODE){
-              return;
-            }
+          if (Serial.available()) {
+            //process this with serialData.
           }
-          
-          //check if we have reached the final well.
-          if(endIndex == getIndex(l,i))
-            return;
 
           //a little messy, but slowly move servo instead of making it jump and keep track of time while doing this.
           float servopos = 160;
           long startTime = millis();
           while (millis() - startTime < this->time) {
-            if (servopos > 90){
+            if (servopos > 90) {
               servopos -= 0.5;
               analogWrite(pins::PWM_SERVO, (int)servopos);
             }
             //delay one ms, this might need to be removed if this turns out to cause too much of a time diff.
             delay(1);
-            
+
+          }
+          //check if we have reached the final well.
+          if (endIndex == getIndex(col, row)){
+            pos->setFastMode(true);
+            pos->home();
+            return;
           }
           analogWrite(pins::PWM_SERVO, 160);
-
-          //check if the next well is the last one in col. if so go the next one
-          if(l+1 != COLS){
-            if(i % 2){
-              pos->steps(-values->WELL_DIST_X, 0);
-            }else{
-              pos->steps(values->WELL_DIST_X, 0);
-            }
-          }else{
-            //special behavior here if head hangs over well for too long, but testing seems to indicate this is ok.
+          //check if we are on a even or odd row and switch direction accordingly.
+          if (row % 2) {
+            pos->steps(-values->WELL_DIST_X, 0);
+          } else {
+            pos->steps(values->WELL_DIST_X, 0);
           }
-          Serial.write(UPDATE_CODE);
-          
         }
-        pos->steps(0, values->WELL_DIST_Y); 
+        //go up at end of row
+        pos->steps(0, values->WELL_DIST_Y);
       }
       pos->home();
-      Serial.write(DONE_CODE);
+      //serialData tell interface we are finished.
       analogWrite(pins::PWM_SERVO, 0);
     }
-    void setEndIndex(int end){
+    void setEndIndex(int end) {
       endIndex = end;
     }
 };

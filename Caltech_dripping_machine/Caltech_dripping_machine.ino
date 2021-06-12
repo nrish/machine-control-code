@@ -11,13 +11,9 @@
 void setup() { 
   
   Serial.begin(19200);
+  //initalize calibration profile
   calibrator calibrationLoader;
   calibrationLoader.loadEEPROM();
-
-  Serial.println (calibrationLoader.getCalibrationValues()->WELL_DIST_X);
-  Serial.println (calibrationLoader.getCalibrationValues()->WELL_DIST_Y);
-  Serial.println (calibrationLoader.getCalibrationValues()->TRAY_DIST_X);
-  Serial.println (calibrationLoader.getCalibrationValues()->TRAY_DIST_Y);
   
   PositionalController* posControl = new PositionalController(calibrationLoader.getCalibrationValues());
   //wait for serial to send bytes

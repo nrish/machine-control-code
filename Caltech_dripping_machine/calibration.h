@@ -1,8 +1,8 @@
 #ifndef CALIBRATION_H
 #define CALIBRATION_H
 #include <EEPROM.h>
-#include "serialData.h"
-
+#include "serialData/serialData.h"
+#define EEPROM_OFFSET 0
 
 class calibrator{
   private:
@@ -17,7 +17,7 @@ class calibrator{
   void loadEEPROM(){
     EEPROMData data;
     for(byte i = 0; i < sizeof(values); i++){
-      data.bytes[i] = EEPROM.read(45+i);
+      data.bytes[i] = EEPROM.read(EEPROM_OFFSET+i);
     }
     this->values = data.values;
     
@@ -28,7 +28,7 @@ class calibrator{
     data.values = this->values;
     for(byte i = 0; i < sizeof(values); i++){
       //to preserve the EEPROM, check if this value is already stored.
-      EEPROM.update(45+i, data.bytes[i]);
+      EEPROM.update(EEPROM_OFFSET+i, data.bytes[i]);
     }
   }
   byte* toByteArray(){
