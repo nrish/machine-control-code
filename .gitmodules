@@ -1,0 +1,3 @@
+[submodule "Caltech_dripping_machine/serialData"]
+	path = Caltech_dripping_machine/serialData
+	url = git@github.com:nrish/caltech-serialData.git
