@@ -15,7 +15,7 @@ class calibrator{
   }
   
   void loadEEPROM(){
-    EEPROMData data;
+    CalibrationValueSerialized data;
     for(byte i = 0; i < sizeof(values); i++){
       data.bytes[i] = EEPROM.read(EEPROM_OFFSET+i);
     }
@@ -24,7 +24,7 @@ class calibrator{
   }
   
   void saveToEEPROM(){
-    EEPROMData data;
+    CalibrationValueSerialized data;
     data.values = this->values;
     for(byte i = 0; i < sizeof(values); i++){
       //to preserve the EEPROM, check if this value is already stored.
