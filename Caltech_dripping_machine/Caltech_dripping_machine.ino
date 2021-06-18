@@ -8,28 +8,46 @@
    By Riley Ramirez and Forrest Ramirez Oct 16 2020
    For Caltech
 */
+bool expflag = true;
+expectSerialized expectedBytes;
+int buffsize = 0;
+byte buff[100];
+calibrator calibrationLoader;
+PositionalController* posControl;
+void readFromBuff(uint8_t* dest, int size){
+  for(int i = 0; i < size && i < 100; i++){
+    dest[i] = buff[i];
+  }
+  buffsize = 0;
+}
 void setup() {
 
   Serial.begin(19200);
   //initalize calibration profile
-  calibrator calibrationLoader;
   calibrationLoader.loadEEPROM();
 
-  PositionalController* posControl = new PositionalController(calibrationLoader.getCalibrationValues());
-  //wait for serial to send bytes
-  while (Serial.available() != sizeof(StartData));
-  //serial mode
-  expectSerialized expectedBytes;
-  while (true) {
-    //wait till there is enough bytes to get command spec
-    while (Serial.available() < sizeof(expect));
-    Serial.readBytes(expectedBytes.bytes, sizeof(expect));
-    if (expectedBytes.value.cmd == CMD_STARTDATA) {
+  posControl = new PositionalController(calibrationLoader.getCalibrationValues());
+}
+void serialEvent() {
+  if (Serial.available() >= sizeof(expect) && expflag) {
+    Serial.readBytes((char*)expectedBytes.bytes, sizeof(expect));
+    //got exp command
+    //get cmd
+    buffsize = 0;
+    while(buffsize < expectedBytes.values.bytes && !expectedBytes.values.request){
+      int temp = Serial.available();
+      Serial.readBytes((char*)(&buff+buffsize), temp+buffsize > 100 ? 100-buffsize : temp);
+      buffsize += temp > 100 ? 100 : temp;
+    }
+    expflag = false;
+  }
+}
+void loop() {
+  if (!expflag && (buffsize >= expectedBytes.values.bytes || expectedBytes.values.request)) {
+    if (expectedBytes.values.cmd == CMD_STARTDATA) {
       //expect start data
-      while (Serial.available() < expectedBytes.value.bytes);
-
       StartDataSerialized startDataSerialized;
-      Serial.readBytes(startDataSerialized.bytes, sizeof(StartData));
+      readFromBuff(startDataSerialized.bytes, sizeof(StartData));
       uint8_t trayIndex = startDataSerialized.values.trayIndex;
       trayProcessor processor(calibrationLoader.getCalibrationValues()->trays[trayIndex].x, calibrationLoader.getCalibrationValues()->trays[trayIndex].y, calibrationLoader.getCalibrationValues());
       processor.setEndIndex(startDataSerialized.values.endWellIndex);
@@ -37,27 +55,38 @@ void setup() {
       processor.setMillsPerWell(startDataSerialized.values.mills);
       processor.process(posControl);
       posControl->home();
-    } else if (expectedBytes.value.cmd == CMD_CALIBRATION) {
+    } else if (expectedBytes.values.cmd == CMD_CALIBRATION) {
       //expect calibration data
-      if (expectedBytes.value.request) {
+      if (expectedBytes.values.request) {
         CalibrationValueSerialized profile;
         profile.values = calibrationLoader.copyCalibrationValues();
+        expectSerialized reply = expect(CMD_CALIBRATION, false);
+        Serial.write(reply.bytes, sizeof(expect));
         Serial.write(profile.bytes, sizeof(CalibrationValues));
+        Serial.flush();
       } else {
         //write cmd
         CalibrationValueSerialized profile;
-        while (Serial.available() < expectedBytes.value.bytes);
-        Serial.readBytes(profile.bytes, sizeof(CalibrationValues));
+        readFromBuff(profile.bytes, sizeof(CalibrationValues));
+        Serial.println("Read profile");
+        Serial.flush();
         calibrationLoader.setCalibrationValues(profile.values);
         calibrationLoader.saveToEEPROM();
+        expectSerialized reply = expect(CMD_UPDATE, false);
+        updateDataSerialized up = updateData(false, false, false, true);
+        Serial.write(reply.bytes, sizeof(expect));
+        Serial.write(profile.bytes, sizeof(CalibrationValues));
+        Serial.flush();
+        
       }
-    } else if (expectedBytes.value.cmd == CMD_UPDATE) {
+      
+    } else if (expectedBytes.values.cmd == CMD_UPDATE) {
       //nothing to do, invalid command. Just swollow it.
 
-    } else if (expectedBytes.value.cmd == CMD_SETPOS) {
-      while (Serial.available() < expectedBytes.value.bytes);
+    } else if (expectedBytes.values.cmd == CMD_SETPOS) {
+      while (Serial.available() < expectedBytes.values.bytes);
       setPosSerialized posData;
-      Serial.readBytes(posData.bytes, sizeof(posData));
+      readFromBuff(posData.bytes, sizeof(posData));
       if (posData.values.home) {
         posControl->setFastMode(true);
         posControl->home();
@@ -67,13 +96,9 @@ void setup() {
         posControl->setPos(posData.values.x, posData.values.y);
       }
 
-    } else {
-
+    }else{
     }
+    Serial.flush();
+    expflag = true;
   }
-
-}
-void loop() {
-  //reset, as shouldn't be here
-  asm volatile ("jmp 0");
 }

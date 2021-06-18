@@ -48,7 +48,7 @@ class trayProcessor {
         for (int col = 0; col < COLS; col++) {
           //check if termination is requested.
           if (Serial.available()) {
-            //process this with serialData.
+            //process this with serialData updates.
           }
 
           //a little messy, but slowly move servo instead of making it jump and keep track of time while doing this.

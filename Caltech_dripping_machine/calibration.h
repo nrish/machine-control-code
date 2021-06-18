@@ -15,7 +15,7 @@ class calibrator{
   }
   
   void loadEEPROM(){
-    CalibrationValueSerialized data;
+    CalibrationValues data;
     for(byte i = 0; i < sizeof(values); i++){
       data.bytes[i] = EEPROM.read(EEPROM_OFFSET+i);
     }
