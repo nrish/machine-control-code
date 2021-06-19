@@ -16,11 +16,12 @@ class trayProcessor {
     int endIndex = 0;
     uint32_t time = 0;
     boolean dir = false;
-    CalibrationValues* values;
+    CalibrationValues values;
   public:
-    trayProcessor(int x, int y, CalibrationValues* values) {
+    trayProcessor(int x, int y, CalibrationValues values) {
       this->y = y;
       this->x = x;
+      this->values = values;
     }
 
     int getIndex(int col, int row) {
@@ -72,13 +73,13 @@ class trayProcessor {
           analogWrite(pins::PWM_SERVO, 160);
           //check if we are on a even or odd row and switch direction accordingly.
           if (row % 2) {
-            pos->steps(-values->WELL_DIST_X, 0);
+            pos->steps(-values.WELL_DIST_Y, 0);
           } else {
-            pos->steps(values->WELL_DIST_X, 0);
+            pos->steps(values.WELL_DIST_Y, 0);
           }
         }
         //go up at end of row
-        pos->steps(0, values->WELL_DIST_Y);
+        pos->steps(0, values.WELL_DIST_Y);
       }
       pos->home();
       //serialData tell interface we are finished.
