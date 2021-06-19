@@ -1,7 +1,7 @@
 #include "Positional.h"
 #include "tray.h"
 #include "calibration.h"
-
+#include "SerialTools.h"
 //term code, trigger to halt well loop and reset arduino
 #define TERM_CODE 0x55
 /**
@@ -14,72 +14,18 @@ int buffsize = 0;
 calibrator calibrationLoader;
 PositionalController* posControl;
 
-/*
- * Experimental serial function
- */
-uint8_t* buff = new uint8_t[128];
-void writePacketStream(uint8_t* data, size_t len){
-  //get number of packets needed to send data plus one if it doesn't fit evenly
-  int packets = len/16 + (len%16 == 0 ? 0 : 1);
-  //make sure we don't leave data in there
-  memset(buff, 0, 128);
-  memcpy(buff, data, len);
-  for(int i = 0; i < packets; i++){
-    //copy 16 byte chunks and write
-    Serial.write((buff+i*16), 16);
-    Serial.flush();
-//    //wait for confirm bit
-//    while(Serial.available() < 0);
-//    //read single confirm bit
-//    Serial.read();
-  }
-}
-void readPacketStream(size_t len){
-  int packets = len/16 + (len%16 == 0 ? 0 : 1);
-  for(int i = 0; i < packets; i++){
-    //read 16 byte chunk
-    Serial.readBytes((buff+i*16), 16);
-    //write confirm bit
-    Serial.write(1);
-  }
-}
-void sendExpect(expect ex){
- expectSerialized exs = ex;
- Serial.write(exs.bytes, sizeof(expect));
- Serial.flush();
-}
-void readExpect(){
-  if(!expflag){
-    if(Serial.available() >= sizeof(expect)){
-      Serial.readBytes(expectedCommand.bytes, sizeof(expect));
-    }else{
-      return ;
-    }
-    expflag = true;
-  }
-}
-
 void setup() {
 
   Serial.begin(19200);
   //initalize calibration profile
   calibrationLoader.loadEEPROM();
-//  Serial.print("WELL_DIST_X ");
-//  Serial.println(calibrationLoader.copyCalibrationValues().WELL_DIST_X);
-//  Serial.print("WELL_DIST_Y ");
-//  Serial.println(calibrationLoader.copyCalibrationValues().WELL_DIST_X);
-//  for(int i = 0; i < 8; i++){
-//    Serial.print("TRAY ");
-//    Serial.print(calibrationLoader.copyCalibrationValues().trays[i].x );
-//    Serial.print(" ");
-//    Serial.println(calibrationLoader.copyCalibrationValues().trays[i].y);
-//  }
+
   posControl = new PositionalController(calibrationLoader.getCalibrationValues());
-  posControl->steps(100, 100);
-  posControl->steps(-100, -100);
+  analogWrite(pins::PWM_SERVO, 160);
+  posControl->home();
 }
 void serialEvent() {
-  readExpect();
+  readExpect(expflag, expectedCommand);
 }
 void loop() {
   if (expflag) {
@@ -104,8 +50,6 @@ void loop() {
         
         sendExpect(expect(CMD_CALIBRATION, false));
         writePacketStream(profile.bytes, sizeof(CalibrationValues));
-        posControl->steps(100, 100);
-        posControl->steps(-100, -100);
       } else {
         //write cmd
         CalibrationValueSerialized profile;
@@ -116,8 +60,6 @@ void loop() {
         
         sendExpect(expect(CMD_UPDATE, false));
         writePacketStream(up.bytes, sizeof(updateData)); 
-        posControl->steps(100, 100);
-        posControl->steps(-100, -100);
       }
       
     } else if (expectedCommand.values.cmd == CMD_UPDATE) {
