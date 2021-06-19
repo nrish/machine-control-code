@@ -8,8 +8,8 @@
    By Riley Ramirez and Forrest Ramirez Oct 16 2020
    For Caltech
 */
-bool expflag = true;
-expectSerialized expectedBytes;
+bool expflag = false;
+expectSerialized expectedCommand;
 int buffsize = 0;
 calibrator calibrationLoader;
 PositionalController* posControl;
@@ -40,14 +40,14 @@ void readPacketStream(size_t len){
     Serial.write(1);
   }
 }
-expectSerialized readExpect(){
+void readExpect(){
   if(!expflag){
-    expectSerialized ex;
     if(Serial.available() >= sizeof(expect)){
-      Serial.readBytes(ex.bytes, sizeof(expect));
+      Serial.readBytes(expectedCommand.bytes, sizeof(expect));
+    }else{
+      return ;
     }
     expflag = true;
-    return ex;
   }
 }
 
@@ -64,9 +64,9 @@ void serialEvent() {
 }
 void loop() {
   if (expflag) {
-    if(!expectedBytes.values.request)
-      readPacketStream(expectedBytes.values.bytes);
-    if (expectedBytes.values.cmd == CMD_STARTDATA && !expectedBytes.values.request) {
+    if(!expectedCommand.values.request)
+      readPacketStream(expectedCommand.values.bytes);
+    if (expectedCommand.values.cmd == CMD_STARTDATA && !expectedCommand.values.request) {
       //expect start data
       StartDataSerialized startDataSerialized;
       memcpy(startDataSerialized.bytes, buff, sizeof(StartDataSerialized));
@@ -77,9 +77,9 @@ void loop() {
       processor.setMillsPerWell(startDataSerialized.values.mills);
       processor.process(posControl);
       posControl->home();
-    } else if (expectedBytes.values.cmd == CMD_CALIBRATION) {
+    } else if (expectedCommand.values.cmd == CMD_CALIBRATION) {
       //expect calibration data
-      if (expectedBytes.values.request) {
+      if (expectedCommand.values.request) {
         CalibrationValueSerialized profile;
         profile.values = calibrationLoader.copyCalibrationValues();
         expectSerialized reply = expect(CMD_CALIBRATION, false);
@@ -90,8 +90,6 @@ void loop() {
         //write cmd
         CalibrationValueSerialized profile;
         memcpy(profile.bytes, buff, sizeof(CalibrationValueSerialized));
-        Serial.println("Read profile");
-        Serial.flush();
         calibrationLoader.setCalibrationValues(profile.values);
         calibrationLoader.saveToEEPROM();
         expectSerialized reply = expect(CMD_UPDATE, false);
@@ -102,11 +100,10 @@ void loop() {
         
       }
       
-    } else if (expectedBytes.values.cmd == CMD_UPDATE) {
+    } else if (expectedCommand.values.cmd == CMD_UPDATE) {
       //nothing to do, invalid command. Just swollow it.
 
-    } else if (expectedBytes.values.cmd == CMD_SETPOS && !expectedBytes.values.request) {
-      while (Serial.available() < expectedBytes.values.bytes);
+    } else if (expectedCommand.values.cmd == CMD_SETPOS && !expectedCommand.values.request) {
       setPosSerialized posData;
       memcpy(posData.bytes, buff, sizeof(setPosSerialized));
       if (posData.values.home) {
@@ -121,6 +118,6 @@ void loop() {
     }else{
     }
     Serial.flush();
-    expflag = true;
+    expflag = false;
   }
 }
