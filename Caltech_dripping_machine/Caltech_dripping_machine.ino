@@ -11,15 +11,46 @@
 bool expflag = true;
 expectSerialized expectedBytes;
 int buffsize = 0;
-byte buff[100];
 calibrator calibrationLoader;
 PositionalController* posControl;
-void readFromBuff(uint8_t* dest, int size){
-  for(int i = 0; i < size && i < 100; i++){
-    dest[i] = buff[i];
+
+/*
+ * Experimental serial function
+ */
+uint8_t* buff = new uint8_t[128];
+void writePacketStream(uint8_t* data, size_t len){
+  //get number of packets needed to send data plus one if it doesn't fit evenly
+  int packets = len/16 + len%16;
+  memcpy(buff, data, len);
+  for(int i = 0; i < packets; i++){
+    //copy 16 byte chunks and write
+    Serial.write((buff+i*16), 16);
+    //wait for confirm bit
+    while(Serial.available() < 0);
+    //read single confirm bit
+    Serial.read();
   }
-  buffsize = 0;
 }
+void readPacketStream(size_t len){
+  int packets = len/16 + len%16;
+  for(int i = 0; i < packets; i++){
+    //read 16 byte chunk
+    Serial.readBytes((buff+i*16), 16);
+    //write confirm bit
+    Serial.write(1);
+  }
+}
+expectSerialized readExpect(){
+  if(!expflag){
+    expectSerialized ex;
+    if(Serial.available() >= sizeof(expect)){
+      Serial.readBytes(ex.bytes, sizeof(expect));
+    }
+    expflag = true;
+    return ex;
+  }
+}
+
 void setup() {
 
   Serial.begin(19200);
@@ -29,25 +60,16 @@ void setup() {
   posControl = new PositionalController(calibrationLoader.getCalibrationValues());
 }
 void serialEvent() {
-  if (Serial.available() >= sizeof(expect) && expflag) {
-    Serial.readBytes((char*)expectedBytes.bytes, sizeof(expect));
-    //got exp command
-    //get cmd
-    buffsize = 0;
-    while(buffsize < expectedBytes.values.bytes && !expectedBytes.values.request){
-      int temp = Serial.available();
-      Serial.readBytes((char*)(&buff+buffsize), temp+buffsize > 100 ? 100-buffsize : temp);
-      buffsize += temp > 100 ? 100 : temp;
-    }
-    expflag = false;
-  }
+  readExpect();
 }
 void loop() {
-  if (!expflag && (buffsize >= expectedBytes.values.bytes || expectedBytes.values.request)) {
-    if (expectedBytes.values.cmd == CMD_STARTDATA) {
+  if (expflag) {
+    if(!expectedBytes.values.request)
+      readPacketStream(expectedBytes.values.bytes);
+    if (expectedBytes.values.cmd == CMD_STARTDATA && !expectedBytes.values.request) {
       //expect start data
       StartDataSerialized startDataSerialized;
-      readFromBuff(startDataSerialized.bytes, sizeof(StartData));
+      memcpy(startDataSerialized.bytes, buff, sizeof(StartDataSerialized));
       uint8_t trayIndex = startDataSerialized.values.trayIndex;
       trayProcessor processor(calibrationLoader.getCalibrationValues()->trays[trayIndex].x, calibrationLoader.getCalibrationValues()->trays[trayIndex].y, calibrationLoader.getCalibrationValues());
       processor.setEndIndex(startDataSerialized.values.endWellIndex);
@@ -67,7 +89,7 @@ void loop() {
       } else {
         //write cmd
         CalibrationValueSerialized profile;
-        readFromBuff(profile.bytes, sizeof(CalibrationValues));
+        memcpy(profile.bytes, buff, sizeof(CalibrationValueSerialized));
         Serial.println("Read profile");
         Serial.flush();
         calibrationLoader.setCalibrationValues(profile.values);
@@ -83,10 +105,10 @@ void loop() {
     } else if (expectedBytes.values.cmd == CMD_UPDATE) {
       //nothing to do, invalid command. Just swollow it.
 
-    } else if (expectedBytes.values.cmd == CMD_SETPOS) {
+    } else if (expectedBytes.values.cmd == CMD_SETPOS && !expectedBytes.values.request) {
       while (Serial.available() < expectedBytes.values.bytes);
       setPosSerialized posData;
-      readFromBuff(posData.bytes, sizeof(posData));
+      memcpy(posData.bytes, buff, sizeof(setPosSerialized));
       if (posData.values.home) {
         posControl->setFastMode(true);
         posControl->home();
