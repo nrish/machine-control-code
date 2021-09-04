@@ -15,8 +15,7 @@ void setup() {
 void serialEvent() {
   //format for receving data
   // [ 1 byte, payload bytes ] [ 1 byte, function id ] [ remaining bytes ]
-  if(Serial.available() >= 2){
-    Serial.println("got serial");
+  if(Serial.available() >= 2){  
     byte payload = Serial.read();
     byte functionID = Serial.read();
     while(Serial.available() < payload);
@@ -24,7 +23,8 @@ void serialEvent() {
     for(int i = 0; payload != 0; i++){
       buffer[i] = Serial.read();
     }
-    events[functionID](buffer, &controller, &cal);
+    if(functionID >= 0 && functionID <= 10)
+      events[functionID](buffer, &controller, &cal);
   }
 }
 

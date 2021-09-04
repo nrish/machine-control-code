@@ -7,7 +7,8 @@ typedef void (*evt_function)(char* data, PositionalController* controller, calib
 #define evtFunc(name) void evt_##name(char* data, PositionalController* controller, calibrator* cal)
 #define evt(name) evt_##name
 
-
+const unsigned char id_debugmsg = 52;
+const unsigned char id_calibrationDataResponse = 51;
 //all data is assumed to be in little endian (native to arduino)
 
 trayProcessor trays[8];
@@ -44,8 +45,10 @@ evtFunc(clearTrays){
 };
 evtFunc(start){
   for(int i = 0; i < 8; i++){
-    trays[i].start(controller, cal->getValues());
-    trays[i].process(controller, cal->getValues());
+    if(trays[i].enabled){
+      trays[i].start(controller, cal->getValues());
+      trays[i].process(controller, cal->getValues());
+    }
   }
 };
 evtFunc(setDistCalibration){
@@ -67,6 +70,8 @@ evtFunc(confirmCalibration){
   cal->saveToEEPROM();
 };
 evtFunc(getCalibrationData){
+  Serial.write(38);
+  Serial.write(id_calibrationDataResponse);
   Serial.write((byte*)&cal->getValues()->WELL_DIST_X, 2);
   Serial.write((byte*)&cal->getValues()->WELL_DIST_Y, 2);
   Serial.write((byte*)&cal->getValues()->X_END_DIR, 1);
@@ -75,6 +80,7 @@ evtFunc(getCalibrationData){
     Serial.write((byte*)&cal->getValues()->trays[i].x, 2);
     Serial.write((byte*)&cal->getValues()->trays[i].y, 2);
   }
+  Serial.flush();
 };
 evt_function events[] = {
   &evt(printTestInfo),
