@@ -1,8 +1,23 @@
 #ifndef CALIBRATION_H
 #define CALIBRATION_H
 #include <EEPROM.h>
-#include "serialData/serialData.h"
 #define EEPROM_OFFSET 0
+struct __attribute__((__packed__)) Tray{
+  int16_t x;
+  int16_t y;
+};
+struct __attribute__((__packed__)) CalibrationValues{
+    CalibrationValues(){}
+    //missing constructor as it shouldn't ever need initalization.
+    //distance between wells
+    int16_t WELL_DIST_X;
+    int16_t WELL_DIST_Y;
+
+    bool Y_END_DIR;
+    bool X_END_DIR;
+    //positions of the 8 trays on machine
+    Tray trays[8];
+};
 
 class calibrator{
   private:
@@ -15,30 +30,24 @@ class calibrator{
   }
   
   void loadEEPROM(){
-    CalibrationValueSerialized data;
+    CalibrationValues data;
+    byte* ptr = (byte*)&data;
     for(byte i = 0; i < sizeof(values); i++){
-      data.bytes[i] = EEPROM.read(EEPROM_OFFSET+i);
+      ptr[i] = EEPROM.read(EEPROM_OFFSET+i);
     }
-    this->values = data.values;
-    
+    this->values = data;
   }
   
   void saveToEEPROM(){
-    CalibrationValueSerialized data;
-    data.values = this->values;
-    for(byte i = 0; i < sizeof(values); i++){
+    CalibrationValues data;
+    byte* ptr = (byte*)&data;
+    for(byte i = 0; i < sizeof(data); i++){
       //to preserve the EEPROM, check if this value is already stored.
-      EEPROM.update(EEPROM_OFFSET+i, data.bytes[i]);
+      EEPROM.update(EEPROM_OFFSET+i, ptr[i]);
     }
   }
-  byte* toByteArray(){
-    
-  }
-  CalibrationValues* getCalibrationValues(){
+  CalibrationValues* getValues(){
     return &values;
-  }
-  CalibrationValues copyCalibrationValues(){
-    return values;
   }
   void setCalibrationValues(CalibrationValues& values){
     this->values = values;

@@ -10,20 +10,12 @@
 const int ROWS = 8;
 const int COLS = 12;
 class trayProcessor {
-  private:
-    int x;
-    int y;
-    int endIndex = 0;
-    uint32_t time = 0;
-    boolean dir = false;
-    CalibrationValues values;
   public:
-    trayProcessor(int x, int y, CalibrationValues values) {
-      this->y = y;
-      this->x = x;
-      this->values = values;
-    }
-
+    byte index;
+    byte startIndex = 0;
+    byte endIndex = 0;
+    uint16_t time = 0;
+    bool enabled = false;
     int getIndex(int col, int row) {
       return col + row * 12;
     }
@@ -33,48 +25,49 @@ class trayProcessor {
     int getCol(int index) {
       return index % 12;
     }
-    void setMillsPerWell(uint32_t time) {
+    void setMillsPerWell(uint16_t time) {
       this->time = time;
     }
-    void start(PositionalController* pos) {
+    void start(PositionalController* pos, CalibrationValues* values) {
       analogWrite(pins::PWM_SERVO, 160);
       delay(150);
       analogWrite(pins::PWM_SERVO, 0);
       pos->setFastMode(true);
-      pos->setPos(x, y);
+      pos->setPos(values->trays[index].x, values->trays[index].y);
       pos->setFastMode(true);
     }
-    void process(PositionalController* pos) {
-      for (int i = 0; i < ROWS; i++) {
-        for (int l = 0; l < COLS; l++) {
-          //send update expect
-
-          if (endIndex == getIndex(l, i))
-            return;
-          float servopos = 160;
-          long startTime = millis();
-          while (millis() - startTime < time) {
-            if (servopos > 90) {
-              servopos -= 0.5;
-              analogWrite(pins::PWM_SERVO, (int)servopos);
-            }
-            delay(1);
-
-          }
-          analogWrite(pins::PWM_SERVO, 160);
-
-          if (l + 1 != COLS) {
-            if (i % 2) {
-              pos->steps(-values.WELL_DIST_X, 0);
-            } else {
-              pos->steps(values.WELL_DIST_X, 0);
-            }
-          } 
-        }
-        pos->steps(0, values.WELL_DIST_Y);
-      }
-      pos->home();
-      analogWrite(pins::PWM_SERVO, 0);
+    void process(PositionalController* pos, CalibrationValues* values) {
+        
+//      for (int i = 0; i < ROWS; i++) {
+//        for (int l = 0; l < COLS; l++) {
+//          //send update expect
+//
+//          if (endIndex == getIndex(l, i))
+//            return;
+//          float servopos = 160;
+//          long startTime = millis();
+//          while (millis() - startTime < time) {
+//            if (servopos > 90) {
+//              servopos -= 0.5;
+//              analogWrite(pins::PWM_SERVO, (int)servopos);
+//            }
+//            delay(1);
+//
+//          }
+//          analogWrite(pins::PWM_SERVO, 160);
+//
+//          if (l + 1 != COLS) {
+//            if (i % 2) {
+//              pos->steps(-values->WELL_DIST_X, 0);
+//            } else {
+//              pos->steps(values->WELL_DIST_X, 0);
+//            }
+//          } 
+//        }
+//        pos->steps(0, values->WELL_DIST_Y);
+//      }
+//      pos->home();
+//      analogWrite(pins::PWM_SERVO, 0);
     }
     void setEndIndex(int end) {
       endIndex = end;
