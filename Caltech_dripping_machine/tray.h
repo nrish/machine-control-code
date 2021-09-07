@@ -9,38 +9,36 @@
 //probably doesn't need to be calibratable
 const int ROWS = 8;
 const int COLS = 12;
-class trayProcessor {
+struct trayProcessor {
   public:
-    byte index;
+    byte trayIndex = 0;
     byte startIndex = 0;
     byte endIndex = 0;
     uint16_t time = 0;
     bool enabled = false;
+
     int getIndex(int col, int row) {
       return col + row * 12;
     }
-    int getRow(int index) {
-      return index / 9;
+    int getRow(int wellIndex) {
+      return wellIndex / ROWS;
     }
-    int getCol(int index) {
-      return index % 12;
-    }
-    void setMillsPerWell(uint16_t time) {
-      this->time = time;
+    int getCol(int wellIndex) {
+      return wellIndex % COLS;
     }
     void start(PositionalController* pos, CalibrationValues* values) {
       analogWrite(pins::PWM_SERVO, 160);
       delay(150);
       analogWrite(pins::PWM_SERVO, 0);
       pos->setFastMode(true);
-      pos->setPos(values->trays[index].x, values->trays[index].y);
+      pos->setPos(values->trays[trayIndex].x, values->trays[trayIndex].y);
       pos->setFastMode(true);
     }
     void process(PositionalController* pos, CalibrationValues* values) {
       for (int i = getRow(startIndex); i < ROWS; i++) {
         for (int l = getCol(startIndex); l < COLS; l++) {
-          int pos_x = values->WELL_DIST_X * COLS + values->trays[index].x;
-          int pos_y = values->WELL_DIST_Y * ROWS + values->trays[index].y;
+          int pos_x = values->WELL_DIST_X * l + values->trays[trayIndex].x;
+          int pos_y = values->WELL_DIST_Y * i + values->trays[trayIndex].y;
           pos->setPos(pos_x, pos_y);
           float servopos = 160;
           long startTime = millis();
@@ -53,7 +51,7 @@ class trayProcessor {
 
           }
           analogWrite(pins::PWM_SERVO, 160);
-          if (endIndex == getIndex(l, i)){
+          if (endIndex <= getIndex(l, i)) {
             delay(100);
             pos->home();
             return;
@@ -90,9 +88,6 @@ class trayProcessor {
       //      }
       //      pos->home();
       //      analogWrite(pins::PWM_SERVO, 0);
-    }
-    void setEndIndex(int end) {
-      endIndex = end;
     }
 };
 #endif

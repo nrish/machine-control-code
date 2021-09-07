@@ -12,6 +12,12 @@ const unsigned char id_calibrationDataResponse = 51;
 //all data is assumed to be in little endian (native to arduino)
 
 trayProcessor trays[8];
+void initTrays(){
+  for(int i = 0; i < 8; i++){
+    trays[i].trayIndex = i;
+    trays[i].enabled = false;
+  }
+}
 evtFunc(printTestInfo){
   Serial.println("Dripper v8.2\nBy Forrest Ramirez & Riley Ramirez\nrramirez6821@gmail.com");
 }
@@ -27,8 +33,7 @@ evtFunc(home){
 evtFunc(addTray){
   //format: index, time, start, end
   byte index = data[0];
-  trays[index].index = index;
-  trays[index].time = *((uint16_t*)data+1);
+  trays[index].time = *((uint16_t*)(data+1));
   trays[index].startIndex = data[3];
   trays[index].endIndex = data[4];
   trays[index].enabled = true;
@@ -60,6 +65,8 @@ evtFunc(setDistCalibration){
 };
 evtFunc(setTrayCalibration){
   byte index = data[0];
+  if(index > 8)
+    return;
   uint16_t* ptr = (uint16_t*)(data+1); 
   cal->getValues()->trays[index].x = ptr[0];
   cal->getValues()->trays[index].y = ptr[1];

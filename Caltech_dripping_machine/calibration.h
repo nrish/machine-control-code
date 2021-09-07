@@ -32,17 +32,17 @@ class calibrator{
   void loadEEPROM(){
     CalibrationValues data;
     byte* ptr = (byte*)&data;
-    for(byte i = 0; i < sizeof(values); i++){
+    for(byte i = 0; i < sizeof(CalibrationValues); i++){
       ptr[i] = EEPROM.read(EEPROM_OFFSET+i);
     }
     this->values = data;
   }
   
   void saveToEEPROM(){
-    CalibrationValues data;
-    byte* ptr = (byte*)&data;
-    for(byte i = 0; i < sizeof(data); i++){
+    byte* ptr = (byte*)&values;
+    for(byte i = 0; i < sizeof(CalibrationValues); i++){
       //to preserve the EEPROM, check if this value is already stored.
+      //right now to keep the current calibration profiles safe we disable writing.
       EEPROM.update(EEPROM_OFFSET+i, ptr[i]);
     }
   }
